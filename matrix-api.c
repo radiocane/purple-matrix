@@ -1017,3 +1017,34 @@ MatrixApiRequestData *matrix_api_get_room_state(MatrixConnectionData *conn,
     return fetch_data;
 }
 #endif
+
+MatrixApiRequestData *matrix_api_send_receipt(MatrixConnectionData *conn,
+/*        const gchar *username,
+        const gchar *password,
+        const gchar *device_id,*/
+        const gchar *room_id,
+        const gchar *receipt_type,
+        const gchar *event_id,
+        MatrixApiCallback callback,
+        gpointer user_data)
+{
+    gchar *url;
+    /*MatrixApiRequestData *fetch_data;*/
+
+    purple_debug_info("matrixprpl", "sending receipt to room %s type %s event_id %s\n", room_id, receipt_type, event_id);
+
+    url = g_strconcat(conn->homeserver, "_matrix/client/r0/rooms/",
+            room_id, "/receipt/", receipt_type, "/", event_id,
+            NULL);
+    purple_debug_info("matrixprpl", "send_receipt url %s\n", url);
+
+    /*json = _build_login_body(username, password, device_id);*/
+
+    /*fetch_data = matrix_api_start(url, "POST", "{}", conn, callback,
+            NULL, NULL, user_data, 0);*/
+    /*g_free(json);*/
+    g_free(url);
+
+    /*return fetch_data;*/
+    return NULL;
+}

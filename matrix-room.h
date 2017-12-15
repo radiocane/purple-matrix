@@ -94,5 +94,6 @@ void matrix_room_send_message(struct _PurpleConversation *conv,
 gchar *matrix_room_displayname_to_userid(struct _PurpleConversation *conv,
         const gchar *who);
 
+void matrix_room_check_receipts(struct _PurpleConversation *conv);
 
 #endif

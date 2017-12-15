@@ -377,4 +377,11 @@ MatrixApiRequestData *matrix_api_get_room_state(MatrixConnectionData *conn,
         gpointer user_data);
 #endif
 
+
+MatrixApiRequestData *matrix_api_send_receipt(MatrixConnectionData *conn,
+        const gchar *room_id,
+        const gchar *receipt_type,
+        const gchar *event_id,
+        MatrixApiCallback callback,
+        gpointer user_data);
 #endif

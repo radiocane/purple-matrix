@@ -33,10 +33,13 @@
 #include "debug.h"
 #include "prpl.h"
 #include "version.h"
+#include "purple_compat.h"
 
 #include "matrix-connection.h"
 #include "matrix-room.h"
 #include "matrix-api.h"
+
+#define MATRIX_PLUGIN_ID "prpl-matrix"
 
 /**
  * Called to get the icon name for the given buddy and account.
@@ -94,6 +97,24 @@ static guint matrixprpl_conv_send_typing(PurpleConversation *conv,
     return 20;
 }
 
+
+void matrixprpl_mark_conv_seen(PurpleConversation *conv, PurpleConversationUpdateType type)
+{
+    PurpleConnection *pc;
+
+    if (type != PURPLE_CONVERSATION_UPDATE_UNSEEN) {
+        return;
+    }
+    pc = purple_conversation_get_connection(conv);
+    if (!PURPLE_CONNECTION_IS_CONNECTED(pc)) {
+        return;
+    }
+    if (!purple_strequal(purple_protocol_get_id(purple_connection_get_protocol(pc)), MATRIX_PLUGIN_ID)) {
+        return;
+    }
+    matrix_room_check_receipts(conv);
+}
+
 /**
  * Start the connection to a matrix account
  */
@@ -102,13 +123,20 @@ void matrixprpl_login(PurpleAccount *acct)
     PurpleConnection *pc = purple_account_get_connection(acct);
     matrix_connection_new(pc);
     matrix_connection_start_login(pc);
+    void *prpl_conv_handle = purple_conversations_get_handle();
     
-    purple_signal_connect(purple_conversations_get_handle(), "chat-conversation-typing", 
+    purple_signal_connect(prpl_conv_handle, "chat-conversation-typing", 
         acct, PURPLE_CALLBACK(matrixprpl_conv_send_typing), pc);
     
     pc->flags |= PURPLE_CONNECTION_HTML;
-}
 
+    purple_signal_connect(
+            prpl_conv_handle,
+            "conversation-updated",
+            purple_connection_get_protocol(pc),
+            PURPLE_CALLBACK(matrixprpl_mark_conv_seen),
+            NULL);
+}
 
 /**
  * Called to handle closing the connection to an account

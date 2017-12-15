@@ -65,6 +65,12 @@ static MatrixConnectionData *_get_connection_data_from_conversation(
 /* PurpleUtilFetchUrlData * */
 #define PURPLE_CONV_DATA_ACTIVE_SEND "active_send"
 
+#define PURPLE_CONV_DATA_LAST_RECVD_ID "last_recvd_id"
+
+#define PURPLE_CONV_DATA_LAST_ACKD_ID "last_ackd_id"
+
+#define PURPLE_CONV_DATA_LAST_ACKD_T "last_ackd_t"
+
 /* MatrixRoomMemberTable * - see below */
 #define PURPLE_CONV_MEMBER_TABLE "member_table"
 
@@ -1077,6 +1083,10 @@ void matrix_room_leave_chat(PurpleConversation *conv)
         g_list_free_full(event_queue, (GDestroyNotify)matrix_event_free);
         purple_conversation_set_data(conv, PURPLE_CONV_DATA_EVENT_QUEUE, NULL);
     }
+    g_string_free(purple_conversation_get_data(conv,
+                PURPLE_CONV_DATA_LAST_RECVD_ID), TRUE);
+    g_string_free(purple_conversation_get_data(conv,
+                PURPLE_CONV_DATA_LAST_ACKD_ID), TRUE);
 }
 
 
@@ -1391,4 +1401,38 @@ void matrix_room_send_message(PurpleConversation *conv, const gchar *message)
 
     g_free(message_to_send);
     g_free(message_dup);
+}
+
+void matrix_room_check_receipts(PurpleConversation *conv)
+{
+    /* TODO Filtering to only send the same "receipt" once.
+     * Each conversation has its own data, there is no risk of confusion:
+     * this function will be called only for the conversation actually seen.
+     * We need storage for our data because purple_conversation_*et_data
+     * only deals with pointers.
+     * We must keep track of the last_time and last_acknowledged for which a
+     * receipt was sent, to avoid sending more than once each MINDELTA
+     * seconds.
+     * When called, evaluate
+     * if {(last_received != last_acknowledged) AND [(now - last_time) < MINDELTA]}
+     * then matrix_api_send_receipt;
+     * else do_nothing;
+     * This must be evaluated also each time a message is received, so it
+     * must go into another function.
+     * last_received and last_acknowledged could be event_ids
+     */
+    GString *last_acked_id = NULL;
+
+    purple_debug_info("matrixprpl", "mark_conv_seen %s\n", purple_conversation_get_title(conv));
+    last_acked_id = purple_conversation_get_data(conv, PURPLE_CONV_DATA_LAST_ACKD_ID);
+    if (last_acked_id) {
+        purple_debug_info("matrixprpl", "old last_acked_id %s\n", last_acked_id->str);
+        last_acked_id = g_string_append(last_acked_id, "1");
+        purple_debug_info("matrixprpl", "updated last-acked_id %s\n", last_acked_id->str);
+        purple_conversation_set_data(conv, PURPLE_CONV_DATA_LAST_ACKD_ID, GUINT_TO_POINTER(last_acked_id));
+    } else {
+        last_acked_id = g_string_new("1");
+        purple_conversation_set_data(conv, PURPLE_CONV_DATA_LAST_ACKD_ID, GUINT_TO_POINTER(last_acked_id));
+        purple_debug_info("matrixprpl", "new last_acked_id %s\n", last_acked_id->str);
+    }
 }
